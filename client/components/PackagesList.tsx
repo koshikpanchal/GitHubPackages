@@ -220,7 +220,12 @@ export default function PackagesList() {
                 {filteredPackages.map((pkg, index) => (
                   <tr key={pkg.name} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                      {pkg.name}
+                      <Link
+                        to={`/package/${pkg.name}`}
+                        className="hover:text-blue-600 hover:underline cursor-pointer"
+                      >
+                        {pkg.name}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                       {formatNumber(pkg.hits)}
