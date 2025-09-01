@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { ArrowUp, ArrowDown, Download, ArrowsUpDown, Bookmark, Share, ExternalLink } from "lucide-react";
+import { ArrowUp, ArrowDown, Download, ArrowUpDown, Bookmark, Share, ExternalLink } from "lucide-react";
 import { Button } from "../components/ui/button";
 import Header from "../components/Header";
 
