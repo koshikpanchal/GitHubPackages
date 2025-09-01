@@ -248,7 +248,7 @@ export default function PackageDetail() {
                 isPositive={pkg.hitsChange > 0}
               />
               <StatCard
-                icon={<ArrowsUpDown className="w-10 h-10" strokeWidth={1} />}
+                icon={<ArrowUpDown className="w-10 h-10" strokeWidth={1} />}
                 label="BANDWIDTH CHANGE"
                 value={`${pkg.bandwidthChange}%`}
                 change={pkg.bandwidthChange}
