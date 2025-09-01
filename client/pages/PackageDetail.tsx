@@ -49,6 +49,42 @@ const packageData: Record<string, PackageData> = {
       { version: "0.0.2", downloads: "4", published: "2 years ago" },
     ],
   },
+  webpack: {
+    name: "webpack",
+    version: "v5.2.1",
+    description: "Module bundler for modern JavaScript applications",
+    hits: 2.29,
+    bandwidth: 34.05,
+    hitsChange: 29.00,
+    bandwidthChange: 17.13,
+    tags: [
+      { version: "5.2.1", downloads: "125,432", tag: "Latest" },
+      { version: "5.2.0", downloads: "98,234", tag: "stable" },
+    ],
+    versions: [
+      { version: "5.2.1", downloads: "125,432", published: "1 month ago" },
+      { version: "5.2.0", downloads: "98,234", published: "2 months ago" },
+      { version: "5.1.9", downloads: "87,654", published: "3 months ago" },
+    ],
+  },
+  express: {
+    name: "express",
+    version: "v4.18.2",
+    description: "Fast, unopinionated web framework for Node.js",
+    hits: 9.56,
+    bandwidth: 44.60,
+    hitsChange: 27.89,
+    bandwidthChange: 23.75,
+    tags: [
+      { version: "4.18.2", downloads: "2,345,678", tag: "Latest" },
+      { version: "4.18.1", downloads: "1,987,543", tag: "stable" },
+    ],
+    versions: [
+      { version: "4.18.2", downloads: "2,345,678", published: "2 weeks ago" },
+      { version: "4.18.1", downloads: "1,987,543", published: "1 month ago" },
+      { version: "4.18.0", downloads: "1,654,321", published: "2 months ago" },
+    ],
+  },
 };
 
 const StatCard = ({ 
