@@ -236,7 +236,7 @@ export default function PackageDetail() {
                 value={`${pkg.hits}B`}
               />
               <StatCard
-                icon={<ArrowsUpDown className="w-10 h-10" strokeWidth={1} />}
+                icon={<ArrowUpDown className="w-10 h-10" strokeWidth={1} />}
                 label="BANDWIDTH"
                 value={`${pkg.bandwidth}GB`}
               />
