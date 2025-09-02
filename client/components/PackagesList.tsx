@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Search, Filter, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Search, Filter, ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import axios from "axios";
-import { fmtGBs, fmtBillions, fmtPctChange } from "../utils/utils";
+import { fmtGBs, fmtBillions, fmtPctChange } from "../lib/utils";
+import PackageTable from "./PackageTable";
+import PackageCard from "./PackageCard";
 
 interface Package {
   name: string;
@@ -19,7 +20,9 @@ interface FilterState {
   minHits: string;
   minBandwidth: string;
   region: string;
-  specificMonth: string;
+  specificMonth?: number;
+  specificQuarter?: number;
+  specificYear?: number;
 }
 
 export default function PackagesList() {
@@ -35,8 +38,7 @@ export default function PackagesList() {
     isOpen: false,
     minHits: "",
     minBandwidth: "",
-    region: "Specific month",
-    specificMonth: "",
+    region: "month",
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,23 +87,6 @@ export default function PackagesList() {
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const formatChange = (change: number) => {
-    const isPositive = change > 0;
-    return (
-      <span
-        className={`flex items-center gap-1 ${isPositive ? "text-green-600" : "text-red-600"}`}
-      >
-        {isPositive ? "+" : ""}
-        {change}
-        {isPositive ? (
-          <ChevronUp className="w-3 h-3" />
-        ) : (
-          <ChevronDown className="w-3 h-3" />
-        )}
-      </span>
-    );
-  };
-
   const handleFilterCloseButton = () => {
     setIsMobileFilterOpen(false);
     setFilter((prev) => ({ ...prev, isOpen: !prev.isOpen }));
@@ -139,7 +124,6 @@ export default function PackagesList() {
           type="number"
           placeholder="Filter by hits"
           value={hits}
-          onChange={(e) => setHits(e.target.value)}
         />
       </div>
 
@@ -151,7 +135,6 @@ export default function PackagesList() {
           className="w-full p-2 border border-gray-200 rounded-md text-sm"
           type="number"
           value={bandwidth}
-          onChange={(e) => setBandwidth(e.target.value)}
           placeholder="Filter by bandwidth"
         />
       </div>
@@ -203,12 +186,6 @@ export default function PackagesList() {
             placeholder="e.g., 2025-01"
             className="w-full p-2 border border-gray-200 rounded-md text-sm"
             value={filter.specificMonth}
-            onChange={(e) =>
-              setFilter((prev) => ({
-                ...prev,
-                specificMonth: e.target.value,
-              }))
-            }
           />
         </div>
       )}
@@ -292,98 +269,13 @@ export default function PackagesList() {
         {/* Main Content */}
         <div className="flex-1">
           {/* Desktop Table View */}
-          <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hits (Billions)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bandwidth (GBs)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hits Change
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bandwidth Change
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {currentPackages.map((pkg, index) => (
-                  <tr key={pkg.name} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                      <Link
-                        to={`/package/${pkg.name}`}
-                        className="hover:text-blue-600 hover:underline cursor-pointer"
-                      >
-                        {pkg.name}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {pkg.hits}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {pkg.bandwidth}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {formatChange(pkg.hitsChange)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {formatChange(pkg.bandwidthChange)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PackageTable packages={currentPackages} />
 
           {/* Mobile Card View */}
-          <div className="lg:hidden space-y-4">
-            {currentPackages.map((pkg) => (
-              <div
-                key={pkg.name}
-                className="bg-white border border-gray-200 rounded-lg p-4"
-              >
-                <h3 className="font-semibold text-lg text-gray-900 mb-3">
-                  <Link
-                    to={`/package/${pkg.name}`}
-                    className="hover:text-blue-600 hover:underline cursor-pointer"
-                  >
-                    {pkg.name}
-                  </Link>
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Hits (Billions):</span>
-                    <span className="font-medium">{pkg.hits}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Bandwidth (GBs):</span>
-                    <span className="font-medium">{pkg.bandwidth}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Hits Change:</span>
-                    {formatChange(pkg.hitsChange)}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Bandwidth Change:</span>
-                    {formatChange(pkg.bandwidthChange)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <PackageCard packages={currentPackages} />
 
           {/* Pagination */}
-          <div className="flex items-center justify-between mt-6">
-            <span className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </span>
+          <div className="flex items-center justify-end mt-6">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -393,6 +285,9 @@ export default function PackagesList() {
               >
                 Previous
               </Button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
