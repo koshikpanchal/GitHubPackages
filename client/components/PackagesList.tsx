@@ -6,6 +6,7 @@ import axios from "axios";
 import { fmtGBs, fmtBillions, fmtPctChange } from "../lib/utils";
 import PackageTable from "./PackageTable";
 import PackageCard from "./PackageCard";
+import TableFooter from "./TableFooter";
 
 interface Package {
   name: string;
@@ -275,39 +276,20 @@ export default function PackagesList() {
           <PackageCard packages={currentPackages} />
 
           {/* Pagination */}
-          <div className="flex items-center justify-end mt-6">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => prev - 1)}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <TableFooter
+            totalPages={totalPages}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
         </div>
       </div>
-      <div>
-        {/* Desktop Filter Sidebar */}
-        {filter.isOpen && (
-          <div className="hidden sm:block fixed top-0 right-0 h-full w-80 bg-white border-l border-gray-200 shadow-lg z-50 overflow-y-auto">
-            <FilterContent />
-          </div>
-        )}
-      </div>
+
+      {/* Desktop Filter Sidebar */}
+      {filter.isOpen && (
+        <div className="hidden sm:block fixed top-0 right-0 h-full w-80 bg-white border-l border-gray-200 shadow-lg z-50 overflow-y-auto">
+          <FilterContent />
+        </div>
+      )}
 
       {/* Mobile Filter Modal */}
       {isMobileFilterOpen && (
