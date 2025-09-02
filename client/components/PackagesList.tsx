@@ -3,7 +3,12 @@ import { Search, Filter, ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import axios from "axios";
-import { fmtGBs, fmtBillions, fmtPctChange } from "../lib/utils";
+import {
+  formatToGbs,
+  formatToBillions,
+  formatPercentageChange,
+  formatBillionsToNumber,
+} from "../lib/utils";
 import PackageTable from "./PackageTable";
 import PackageCard from "./PackageCard";
 import TableFooter from "./TableFooter";
@@ -18,9 +23,9 @@ interface Package {
 
 interface FilterState {
   isOpen: boolean;
-  minHits: string;
-  minBandwidth: string;
-  region: string;
+  hits: string;
+  bandwidth: string;
+  period: string;
   specificMonth?: number;
   specificQuarter?: number;
   specificYear?: number;
@@ -32,14 +37,14 @@ export default function PackagesList() {
   const [fetchBy, setFetchBy] = useState("hits");
   const [fetchType, setFetchType] = useState("npm");
   const [period, setPeriod] = useState("month");
-  const [hits, setHits] = useState<number>();
-  const [bandwidth, setBandwidth] = useState<number>();
+  const [hits, setHits] = useState<string>();
+  const [bandwidth, setBandwidth] = useState<string>();
 
   const [filter, setFilter] = useState<FilterState>({
     isOpen: false,
-    minHits: "",
-    minBandwidth: "",
-    region: "month",
+    hits,
+    bandwidth,
+    period,
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -48,9 +53,9 @@ export default function PackagesList() {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const fetchData = async (
-    fetchBy: String,
-    fetchType: String,
-    period: String,
+    fetchBy: string,
+    fetchType: string,
+    period: string,
   ) => {
     const currentData = axios.get(
       `https://data.jsdelivr.com/v1/stats/packages?by=${fetchBy}&type=${fetchType}&period=${period}`,
@@ -64,14 +69,14 @@ export default function PackagesList() {
 
     const stats = current.data.map((pkg) => {
       const prev = previous.data.find((p) => p.name === pkg.name);
-      const hitsChange = prev ? fmtPctChange(pkg.hits, prev.hits) : 0;
+      const hitsChange = prev ? formatPercentageChange(pkg.hits, prev.hits) : 0;
       const bandwidthChange = prev
-        ? fmtPctChange(pkg.bandwidth, prev.bandwidth)
+        ? formatPercentageChange(pkg.bandwidth, prev.bandwidth)
         : 0;
       return {
         name: pkg.name,
-        hits: fmtBillions(pkg.hits),
-        bandwidth: fmtGBs(pkg.bandwidth),
+        hits: formatToBillions(pkg.hits),
+        bandwidth: formatToGbs(pkg.bandwidth),
         hitsChange,
         bandwidthChange,
       };
@@ -82,7 +87,7 @@ export default function PackagesList() {
 
   useEffect(() => {
     fetchData(fetchBy, fetchType, period);
-  }, [fetchBy, fetchType, period]);
+  }, []);
 
   const filteredPackages = packages.filter((pkg: Package) =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -125,6 +130,7 @@ export default function PackagesList() {
           type="number"
           placeholder="Filter by hits"
           value={hits}
+          onChange={(e) => setHits(e.target.value)}
         />
       </div>
 
@@ -137,6 +143,7 @@ export default function PackagesList() {
           type="number"
           value={bandwidth}
           placeholder="Filter by bandwidth"
+          onChange={(e) => setBandwidth(e.target.value)}
         />
       </div>
 
@@ -162,14 +169,14 @@ export default function PackagesList() {
                 type="radio"
                 name="region"
                 value={option}
-                checked={filter.region === option}
+                checked={filter.period === option}
                 onChange={(e) =>
                   setFilter((prev) => ({ ...prev, region: e.target.value }))
                 }
                 className="mr-2"
               />
               <span className="text-sm">{option}</span>
-              {option === "Specific month" && filter.region === option && (
+              {option === "Specific month" && filter.period === option && (
                 <div className="ml-auto w-4 h-4 bg-black rounded-full"></div>
               )}
             </label>
@@ -177,10 +184,10 @@ export default function PackagesList() {
         </div>
       </div>
 
-      {filter.region.startsWith("Specific") && (
+      {filter.period.startsWith("Specific") && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {filter.region}
+            {filter.period}
           </label>
           <input
             type="text"
