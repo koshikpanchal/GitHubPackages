@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search, Filter, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import axios from "axios";
+import { fmtGBs, fmtBillions, fmtPctChange } from "../utils/utils";
 
 interface Package {
   name: string;
@@ -11,72 +13,6 @@ interface Package {
   hitsChange: number;
   bandwidthChange: number;
 }
-
-const mockPackages: Package[] = [
-  {
-    name: "react",
-    hits: 3.59,
-    bandwidth: 46.77,
-    hitsChange: 29.88,
-    bandwidthChange: -9.83,
-  },
-  {
-    name: "webpack",
-    hits: 2.29,
-    bandwidth: 34.05,
-    hitsChange: 29.0,
-    bandwidthChange: 17.13,
-  },
-  {
-    name: "express",
-    hits: 9.56,
-    bandwidth: 44.6,
-    hitsChange: 27.89,
-    bandwidthChange: 23.75,
-  },
-  {
-    name: "lodash",
-    hits: 7.1,
-    bandwidth: 87.51,
-    hitsChange: 24.38,
-    bandwidthChange: 4.79,
-  },
-  {
-    name: "vue",
-    hits: 9.21,
-    bandwidth: 37.26,
-    hitsChange: 23.39,
-    bandwidthChange: 0.15,
-  },
-  {
-    name: "tailwindcss",
-    hits: 1.69,
-    bandwidth: 88.32,
-    hitsChange: 22.75,
-    bandwidthChange: 4.07,
-  },
-  {
-    name: "chart.js",
-    hits: 8.25,
-    bandwidth: 49.61,
-    hitsChange: 22.25,
-    bandwidthChange: 2.49,
-  },
-  {
-    name: "moment",
-    hits: 6.52,
-    bandwidth: 89.79,
-    hitsChange: 18.16,
-    bandwidthChange: 9.3,
-  },
-  {
-    name: "jquery",
-    hits: 3.83,
-    bandwidth: 106.03,
-    hitsChange: 15.03,
-    bandwidthChange: 23.79,
-  },
-];
 
 interface FilterState {
   isOpen: boolean;
@@ -87,7 +23,14 @@ interface FilterState {
 }
 
 export default function PackagesList() {
+  const [packages, setPackages] = useState<Package[] | []>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fetchBy, setFetchBy] = useState("hits");
+  const [fetchType, setFetchType] = useState("npm");
+  const [period, setPeriod] = useState("month");
+  const [hits, setHits] = useState<number>();
+  const [bandwidth, setBandwidth] = useState<number>();
+
   const [filter, setFilter] = useState<FilterState>({
     isOpen: false,
     minHits: "",
@@ -95,16 +38,52 @@ export default function PackagesList() {
     region: "Specific month",
     specificMonth: "",
   });
+
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  const filteredPackages = mockPackages.filter((pkg) =>
+  const fetchData = async (
+    fetchBy: String,
+    fetchType: String,
+    period: String,
+  ) => {
+    const currentData = axios.get(
+      `https://data.jsdelivr.com/v1/stats/packages?by=${fetchBy}&type=${fetchType}&period=${period}`,
+    );
+
+    const previousData = axios.get(
+      `https://data.jsdelivr.com/v1/stats/packages?by=${fetchBy}&type=${fetchType}&period=s-${period}`,
+    );
+
+    const [current, previous] = await Promise.all([currentData, previousData]);
+
+    const stats = current.data.map((pkg) => {
+      const prev = previous.data.find((p) => p.name === pkg.name);
+      const hitsChange = prev ? fmtPctChange(pkg.hits, prev.hits) : 0;
+      const bandwidthChange = prev
+        ? fmtPctChange(pkg.bandwidth, prev.bandwidth)
+        : 0;
+      return {
+        name: pkg.name,
+        hits: fmtBillions(pkg.hits),
+        bandwidth: fmtGBs(pkg.bandwidth),
+        hitsChange,
+        bandwidthChange,
+      };
+    });
+
+    setPackages(stats);
+  };
+
+  useEffect(() => {
+    fetchData(fetchBy, fetchType, period);
+  }, [fetchBy, fetchType, period]);
+
+  const filteredPackages = packages.filter((pkg: Package) =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
-
-  const formatNumber = (num: number) => {
-    return num.toFixed(2);
-  };
 
   const formatChange = (change: number) => {
     const isPositive = change > 0;
@@ -113,7 +92,7 @@ export default function PackagesList() {
         className={`flex items-center gap-1 ${isPositive ? "text-green-600" : "text-red-600"}`}
       >
         {isPositive ? "+" : ""}
-        {change.toFixed(2)}%
+        {change}
         {isPositive ? (
           <ChevronUp className="w-3 h-3" />
         ) : (
@@ -123,36 +102,58 @@ export default function PackagesList() {
     );
   };
 
+  const handleFilterCloseButton = () => {
+    setIsMobileFilterOpen(false);
+    setFilter((prev) => ({ ...prev, isOpen: !prev.isOpen }));
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPackages = filteredPackages.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+
+  const totalPages = Math.ceil(filteredPackages.length / itemsPerPage);
+
   const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className={`${isMobile ? "p-6" : "p-4"} space-y-6`}>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Filter</h3>
-        {isMobile && (
+        {
           <button
-            onClick={() => setIsMobileFilterOpen(false)}
+            onClick={handleFilterCloseButton}
             className="p-1 hover:bg-gray-100 rounded"
           >
             <X className="w-5 h-5" />
           </button>
-        )}
+        }
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Minimum Hits (Billions)
         </label>
-        <select className="w-full p-2 border border-gray-200 rounded-md text-sm">
-          <option>Filter by hits</option>
-        </select>
+        <input
+          className="w-full p-2 border border-gray-200 rounded-md text-sm"
+          type="number"
+          placeholder="Filter by hits"
+          value={hits}
+          onChange={(e) => setHits(e.target.value)}
+        />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Minimum Bandwidth (GBs)
         </label>
-        <select className="w-full p-2 border border-gray-200 rounded-md text-sm">
-          <option>Filter by bandwidth</option>
-        </select>
+        <input
+          className="w-full p-2 border border-gray-200 rounded-md text-sm"
+          type="number"
+          value={bandwidth}
+          onChange={(e) => setBandwidth(e.target.value)}
+          placeholder="Filter by bandwidth"
+        />
       </div>
 
       <div>
@@ -165,9 +166,9 @@ export default function PackagesList() {
             "Week",
             "Month",
             "Quarter",
-            "$ - month",
-            "$ - quarter",
-            "$ - year",
+            "s-month",
+            "s-quarter",
+            "s-year",
             "Specific month",
             "Specific quarter",
             "Specific year",
@@ -192,10 +193,10 @@ export default function PackagesList() {
         </div>
       </div>
 
-      {filter.region === "Specific month" && (
+      {filter.region.startsWith("Specific") && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Specific month
+            {filter.region}
           </label>
           <input
             type="text"
@@ -203,7 +204,10 @@ export default function PackagesList() {
             className="w-full p-2 border border-gray-200 rounded-md text-sm"
             value={filter.specificMonth}
             onChange={(e) =>
-              setFilter((prev) => ({ ...prev, specificMonth: e.target.value }))
+              setFilter((prev) => ({
+                ...prev,
+                specificMonth: e.target.value,
+              }))
             }
           />
         </div>
@@ -220,65 +224,67 @@ export default function PackagesList() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Header Section */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          GitHub Packages list
-        </h1>
-        <p className="text-gray-600">
-          Explore information about different packages
-        </p>
-      </div>
-
-      {/* Search and Filter Section */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+        {/* Header Section */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            GitHub Packages list
+          </h1>
+          <p className="text-gray-600">
+            Explore information about different packages
+          </p>
         </div>
 
-        <div className="flex gap-2">
-          {/* Mobile Filter Button */}
-          <Button
-            variant="outline"
-            onClick={() => setIsMobileFilterOpen(true)}
-            className="sm:hidden flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-            <ChevronDown className="w-4 h-4" />
-          </Button>
+        {/* Search and Filter Section */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-          {/* Desktop Filter Button */}
-          <Button
-            variant="outline"
-            onClick={() =>
-              setFilter((prev) => ({ ...prev, isOpen: !prev.isOpen }))
-            }
-            className="hidden sm:flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-
-          <Button variant="outline" size="icon">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          <div className="flex gap-2">
+            {/* Mobile Filter Button */}
+            <Button
+              variant="outline"
+              onClick={() => setIsMobileFilterOpen(true)}
+              className="sm:hidden flex items-center gap-2"
             >
-              <path d="M3 6h18M7 12h10m-7 6h4" />
-            </svg>
-          </Button>
+              <Filter className="w-4 h-4" />
+              Filter
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+
+            {/* Desktop Filter Button */}
+            <Button
+              variant="outline"
+              onClick={() =>
+                setFilter((prev) => ({ ...prev, isOpen: !prev.isOpen }))
+              }
+              className="hidden sm:flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filter
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+
+            <Button variant="outline" size="icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 6h18M7 12h10m-7 6h4" />
+              </svg>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -308,7 +314,7 @@ export default function PackagesList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredPackages.map((pkg, index) => (
+                {currentPackages.map((pkg, index) => (
                   <tr key={pkg.name} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                       <Link
@@ -319,10 +325,10 @@ export default function PackagesList() {
                       </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {formatNumber(pkg.hits)}
+                      {pkg.hits}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {formatNumber(pkg.bandwidth)}
+                      {pkg.bandwidth}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {formatChange(pkg.hitsChange)}
@@ -338,7 +344,7 @@ export default function PackagesList() {
 
           {/* Mobile Card View */}
           <div className="lg:hidden space-y-4">
-            {filteredPackages.map((pkg) => (
+            {currentPackages.map((pkg) => (
               <div
                 key={pkg.name}
                 className="bg-white border border-gray-200 rounded-lg p-4"
@@ -354,15 +360,11 @@ export default function PackagesList() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Hits (Billions):</span>
-                    <span className="font-medium">
-                      {formatNumber(pkg.hits)}
-                    </span>
+                    <span className="font-medium">{pkg.hits}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Bandwidth (GBs):</span>
-                    <span className="font-medium">
-                      {formatNumber(pkg.bandwidth)}
-                    </span>
+                    <span className="font-medium">{pkg.bandwidth}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Hits Change:</span>
@@ -379,21 +381,34 @@ export default function PackagesList() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
-            <span className="text-sm text-gray-600">Page 1 of 2</span>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => prev - 1)}
+              >
                 Previous
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+              >
                 Next
               </Button>
             </div>
           </div>
         </div>
-
+      </div>
+      <div>
         {/* Desktop Filter Sidebar */}
         {filter.isOpen && (
-          <div className="hidden sm:block w-80 bg-white border border-gray-200 rounded-lg h-fit">
+          <div className="hidden sm:block fixed top-0 right-0 h-full w-80 bg-white border-l border-gray-200 shadow-lg z-50 overflow-y-auto">
             <FilterContent />
           </div>
         )}
