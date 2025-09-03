@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, Filter, ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -7,7 +7,6 @@ import {
   formatToGbs,
   formatToBillions,
   formatPercentageChange,
-  formatBillionsToNumber,
 } from "../lib/utils";
 import PackageTable from "./PackageTable";
 import PackageCard from "./PackageCard";
@@ -23,13 +22,26 @@ interface Package {
 
 interface FilterState {
   isOpen: boolean;
-  hits: string;
-  bandwidth: string;
+  hits: number;
+  bandwidth: number;
   period: string;
   specificMonth?: number;
   specificQuarter?: number;
   specificYear?: number;
 }
+
+const REGION_OPTIONS = [
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "s-month",
+  "s-quarter",
+  "s-year",
+  "Specific month",
+  "Specific quarter",
+  "Specific year",
+];
 
 export default function PackagesList() {
   const [packages, setPackages] = useState<Package[] | []>([]);
@@ -37,13 +49,14 @@ export default function PackagesList() {
   const [fetchBy, setFetchBy] = useState("hits");
   const [fetchType, setFetchType] = useState("npm");
   const [period, setPeriod] = useState("month");
-  const [hits, setHits] = useState<string>();
-  const [bandwidth, setBandwidth] = useState<string>();
+  const [hits, setHits] = useState<number>();
+  const [bandwidth, setBandwidth] = useState<number>();
+  const [specificFilterValue, setSpecificFilterValue] = useState<string>();
 
   const [filter, setFilter] = useState<FilterState>({
     isOpen: false,
-    hits,
-    bandwidth,
+    hits: 0,
+    bandwidth: 0,
     period,
   });
 
@@ -87,7 +100,7 @@ export default function PackagesList() {
 
   useEffect(() => {
     fetchData(fetchBy, fetchType, period);
-  }, []);
+  }, [period]);
 
   const filteredPackages = packages.filter((pkg: Package) =>
     pkg.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -106,6 +119,43 @@ export default function PackagesList() {
   );
 
   const totalPages = Math.ceil(filteredPackages.length / itemsPerPage);
+
+  const handleFilterApplyButton = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hits || bandwidth) {
+      const updatedPackage = currentPackages
+        .filter((pack) => pack.hits >= hits)
+        .filter((pack) => pack.bandwidth >= bandwidth);
+      setPackages(updatedPackage);
+    }
+    if (period.startsWith("Specific")) {
+      setPeriod(specificFilterValue);
+    } else {
+      setPeriod(filter.period);
+    }
+
+    setFilter((data) => {
+      return {
+        ...data,
+        period: period,
+        hits: hits,
+        bandwidth: bandwidth,
+        isOpen: false,
+      };
+    });
+  };
+
+  const handleReset = () => {
+    setHits(0);
+    setBandwidth(0);
+    setPeriod("month");
+    setFilter({
+      isOpen: false,
+      hits: 0,
+      bandwidth: 0,
+      period: "month",
+    });
+  };
 
   const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className={`${isMobile ? "p-6" : "p-4"} space-y-6`}>
@@ -130,7 +180,7 @@ export default function PackagesList() {
           type="number"
           placeholder="Filter by hits"
           value={hits}
-          onChange={(e) => setHits(e.target.value)}
+          onChange={(e) => setHits(Number(e.target?.value))}
         />
       </div>
 
@@ -143,7 +193,7 @@ export default function PackagesList() {
           type="number"
           value={bandwidth}
           placeholder="Filter by bandwidth"
-          onChange={(e) => setBandwidth(e.target.value)}
+          onChange={(e) => setBandwidth(Number(e.target.value))}
         />
       </div>
 
@@ -152,18 +202,7 @@ export default function PackagesList() {
           Region
         </label>
         <div className="space-y-2">
-          {[
-            "Day",
-            "Week",
-            "Month",
-            "Quarter",
-            "s-month",
-            "s-quarter",
-            "s-year",
-            "Specific month",
-            "Specific quarter",
-            "Specific year",
-          ].map((option) => (
+          {REGION_OPTIONS.map((option) => (
             <label key={option} className="flex items-center">
               <input
                 type="radio"
@@ -171,7 +210,7 @@ export default function PackagesList() {
                 value={option}
                 checked={filter.period === option}
                 onChange={(e) =>
-                  setFilter((prev) => ({ ...prev, region: e.target.value }))
+                  setFilter((prev) => ({ ...prev, period: e.target.value }))
                 }
                 className="mr-2"
               />
@@ -193,16 +232,19 @@ export default function PackagesList() {
             type="text"
             placeholder="e.g., 2025-01"
             className="w-full p-2 border border-gray-200 rounded-md text-sm"
-            value={filter.specificMonth}
+            value={specificFilterValue}
+            onChange={(e) => setSpecificFilterValue(e.target.value)}
           />
         </div>
       )}
 
       <div className="flex gap-3 pt-4">
-        <Button variant="outline" className="flex-1">
+        <Button variant="outline" className="flex-1" onClick={handleReset}>
           Reset
         </Button>
-        <Button className="flex-1">Apply</Button>
+        <Button className="flex-1" onClick={handleFilterApplyButton}>
+          Apply
+        </Button>
       </div>
     </div>
   );
