@@ -146,15 +146,7 @@ export default function PackagesList() {
   };
 
   const handleReset = () => {
-    setHits(0);
-    setBandwidth(0);
-    setPeriod("month");
-    setFilter({
-      isOpen: false,
-      hits: 0,
-      bandwidth: 0,
-      period: "month",
-    });
+    fetchData(fetchBy, fetchType, "month");
   };
 
   const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
