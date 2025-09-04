@@ -242,24 +242,6 @@ export default function PackageDetail() {
     fetchData();
   }, []);
 
-  if (!packageStat) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-          <div className="text-center py-12">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Package Not Found
-            </h1>
-            <p className="text-gray-600">
-              The package "{packageName}" could not be found.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
