@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   ArrowUp,
@@ -10,6 +11,12 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import Header from "../components/Header";
+import axios from "axios";
+import {
+  formatToGbs,
+  formatToBillions,
+  formatPercentageChange,
+} from "../lib/utils";
 
 interface PackageData {
   name: string;
@@ -29,6 +36,14 @@ interface PackageData {
     downloads: string;
     published: string;
   }>;
+}
+
+interface PackageStatData {
+  name: string;
+  hits: string;
+  bandwidth: string;
+  hitsChange: number | string;
+  bandwidthChange: number | string;
 }
 
 // Mock data - in real app this would come from API
@@ -134,11 +149,11 @@ const StatCard = ({
 }) => (
   <div className="flex max-h-40 p-6 items-start gap-5 flex-1 rounded-2xl border border-gray-300 bg-white">
     <div className="text-blue-600 flex-shrink-0">{icon}</div>
-    <div className="flex flex-col items-start gap-3">
-      <div className="text-gray-400 text-lg font-normal uppercase tracking-wide">
+    <div className="flex flex-col items-start gap-2">
+      <div className="text-gray-400 text-l font-normal uppercase tracking-wide">
         {label}
       </div>
-      <div className="text-blue-900 text-2xl font-bold leading-7">{value}</div>
+      <div className="text-blue-900 text-xl font-bold leading-7">{value}</div>
       {change !== undefined && (
         <div
           className={`flex items-center gap-1 text-sm font-bold ${
@@ -193,10 +208,41 @@ const ChartComponent = () => (
 );
 
 export default function PackageDetail() {
-  const { packageName } = useParams<{ packageName: string }>();
-  const pkg = packageName ? packageData[packageName] : null;
+  const [packageStat, setPackageStat] = useState<PackageStatData>();
 
-  if (!pkg) {
+  const { packageName } = useParams<{ packageName: string }>();
+
+  const fetchData = async () => {
+    const { data }: any = await axios.get(
+      `https://data.jsdelivr.com/v1/stats/packages/npm/${packageName}?period=week`,
+    );
+
+    const hits = data.hits.total;
+    const previousHits = data.hits.prev.total;
+    const bandwidth = data.bandwidth.total;
+    const previousBandwidth = data.bandwidth.prev.total;
+    const hitsChange = formatPercentageChange(hits, previousHits, 2);
+    const bandwidthChange = formatPercentageChange(
+      bandwidth,
+      previousBandwidth,
+      2,
+    );
+
+    setPackageStat({
+      name: packageName,
+      hits: formatToBillions(hits),
+      bandwidth: formatToGbs(bandwidth),
+      hitsChange,
+      bandwidthChange,
+    });
+  };
+  console.log(packageStat);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  if (!packageStat) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -248,7 +294,7 @@ export default function PackageDetail() {
                 {/* Title and Description */}
                 <div className="flex flex-col justify-center items-start gap-2">
                   <h1 className="text-black text-3xl font-bold leading-8 tracking-wide">
-                    {pkg.name}
+                    {packageStat?.name}
                   </h1>
                   <div className="flex items-start gap-3">
                     <div className="flex px-2 py-1 justify-center items-center gap-2 rounded-full bg-black">
@@ -257,14 +303,14 @@ export default function PackageDetail() {
                       </span>
                     </div>
                     <span className="text-black text-sm font-normal leading-5 tracking-wide">
-                      {pkg.version}
+                      {/* {pkg.version} */}
                     </span>
                     <span className="text-black text-sm font-normal leading-5 tracking-wide">
                       MT
                     </span>
                   </div>
                   <p className="text-black text-sm font-normal leading-5 tracking-wide">
-                    {pkg.description}
+                    {/* {pkg.description} */}
                   </p>
                 </div>
               </div>
@@ -302,12 +348,12 @@ export default function PackageDetail() {
               <StatCard
                 icon={<Download className="w-10 h-10" strokeWidth={1} />}
                 label="HITS"
-                value={`${pkg.hits}B`}
+                value={`${packageStat?.hits}B`}
               />
               <StatCard
                 icon={<ArrowUpDown className="w-10 h-10" strokeWidth={1} />}
                 label="BANDWIDTH"
-                value={`${pkg.bandwidth}GB`}
+                value={`${packageStat?.bandwidth}GB`}
               />
               <StatCard
                 icon={
@@ -317,16 +363,12 @@ export default function PackageDetail() {
                   />
                 }
                 label="HITS CHANGE"
-                value={`+${pkg.hitsChange}%`}
-                change={pkg.hitsChange}
-                isPositive={pkg.hitsChange > 0}
+                value={`+${packageStat?.hitsChange}%`}
               />
               <StatCard
                 icon={<ArrowUpDown className="w-10 h-10" strokeWidth={1} />}
-                label="BANDWIDTH CHANGE"
-                value={`${pkg.bandwidthChange}%`}
-                change={pkg.bandwidthChange}
-                isPositive={pkg.bandwidthChange > 0}
+                label="BANDWIDTH CHANGED"
+                value={`${packageStat?.bandwidthChange}%`}
               />
             </div>
           </div>
@@ -362,7 +404,7 @@ export default function PackageDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pkg.tags.map((tag, index) => (
+                      {/* {pkg.tags.map((tag, index) => (
                         <tr key={index} className="border-b border-gray-200">
                           <td className="px-6 py-4 text-gray-500 text-lg font-normal leading-5 tracking-wide">
                             {tag.version}
@@ -374,7 +416,7 @@ export default function PackageDetail() {
                             {tag.tag}
                           </td>
                         </tr>
-                      ))}
+                      ))} */}
                     </tbody>
                   </table>
                 </div>
@@ -407,7 +449,7 @@ export default function PackageDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pkg.versions.map((version, index) => (
+                      {/* {pkg.versions.map((version, index) => (
                         <tr key={index} className="border-b border-gray-200">
                           <td className="px-6 py-4 text-gray-500 text-lg font-normal leading-5 tracking-wide">
                             {version.version}
@@ -419,7 +461,7 @@ export default function PackageDetail() {
                             {version.published}
                           </td>
                         </tr>
-                      ))}
+                      ))} */}
                     </tbody>
                   </table>
                 </div>
